@@ -1,0 +1,291 @@
+property DF_Wks_Prefix : "DFWKSMOSX"
+property dfass : "Deep Freeze Installer"
+property dflic : "put your deep freeze license here"
+property workingFolderPath : "path to your df folder" -- e.g "Macintosh HD:Users:Shared:DFMac_Config
+
+-- key for v Faronics_DFK_7.72.220.4535 Mac v 5.80.2200.0820
+-- script updated for new Deep Freeze Installer for OS X Mountain Lion (10.6-10.9)
+
+-- now requires install Extra Suites from http://www.kanzu.com/downloads/Extra_Suites.zip
+
+set the clipboard to dflic
+
+set workingFolder to workingFolderPath as alias
+set csvData to read file "Mac HD:DFX_Config:DeepFreeze.csv"
+set csvEntries to paragraphs of csvData
+set pNum to number of paragraphs of csvData
+--display dialog (count csvEntries)
+--item1-5 "department_name","oracle_id","department_school_type","unit_no","ms_shortnm"
+--item6-10 "DEEP_FREEZE_PASSWORD","DISTSRV_NAME","DISTSRV_PRIMARY_IP","ordinal"
+-- removed techcopass dependency
+
+-- apparently old CSV format showed number of Macs along with techco pw?
+
+repeat with i from 1 to count csvEntries
+	set {dept_Fullname, dept_id, dept_type, legacy_unit, dept_name, dfpass, distsrv_name, distsrv_ip, site_ordinal} to parseCsvEntry(csvEntries's item i)
+	--set {dept_Fullname, dept_id, dept_type, legacy_unit, dept_name, dfpass, distsrv_name, distsrv_ip, site_ordinal, techcopass} to parseCsvEntry(csvEntries's item i)
+	if dept_Fullname is not "department_name" then
+		--display dialog "line " & i
+		--display dialog dept_name & "-" & dept_id & " " & techcopass & " " & dfpass & " " & distsrv_name
+		set destinationFolder to "Mac HD:DFX_Config:" as alias
+		tell application "Finder"
+			if (exists folder distsrv_name of workingFolder) is true then
+				set destFolderExists to true
+				set DestFile to DF_Wks_Prefix & dept_id & ".pkg"
+				if (exists file DestFile of folder distsrv_name of workingFolder) is true then
+					set destFileExists to true
+				else
+					set destFileExists to false
+				end if
+			else
+				set destFolderExists to false
+			end if
+		end tell
+		if dfpass is "" then
+			set dfpass to "cps" & dept_id & dept_name
+		end if
+		if not destFileExists then
+			tell application dfass
+				activate
+			end tell
+			tell application "System Events"
+				tell process dfass
+					--lame checkbox button instead of simple keyboard driven interface
+					tell window dfass
+						if (exists checkbox 2 of group 1) is true then click checkbox 2 of group 1
+						click button "Continue"
+					end tell
+					tell window dfass
+						click button "Continue"
+						if (exists radio button 2 of group 1) is true then
+							click radio button 2 of group 1
+						end if
+						set value of text field 1 of group 1 to dflic
+						--					click button "Continue"
+					end tell
+					--				tell application "Extra Suites" to ES move mouse {330, 170}
+					--				tell application "Extra Suites" to ES move mouse {264, 620}
+					--				tell application "Extra Suites" to ES click mouse
+					tell application "Extra Suites" to ES move mouse {340, 522}
+					tell application "Extra Suites" to ES click mouse
+					key code 123 -- left arrow Key
+					delay 0.5
+					tell application "Extra Suites" to ES move mouse {25, 967}
+					delay 0.5
+					tell application "Extra Suites" to ES click mouse
+					delay 0.5
+					--				tell application "System Events" to keystroke "a" using command down
+					--				tell application "System Events" to keystroke "v" using command down
+					--				tell window dfass to click button "Continue"
+				end tell
+			end tell
+			-- delicate nonsense to get the license key to be accepted. 		
+			tell application "System Events"
+				tell process dfass
+					key code 124
+					delay 0.2
+					keystroke "."
+					delay 0.2
+					key code 51
+					tell window dfass to click button "Continue"
+					tell window dfass to click button "Continue"
+					tell window dfass to click button "Continue"
+					--tell window dfass to set value of text field 1 of group 1 to "techco"
+					--	delay 1
+					--	tell window dfass to set value of text field 2 of group 1 to techcopass
+					--	delay 1
+					--	tell window dfass to set value of text field 1 of group 1 to techcopass
+					--	delay 1
+					tell window dfass to click button "Continue"
+					keystroke return
+					keystroke tab
+					keystroke dfpass
+					keystroke tab
+					keystroke dfpass
+					tell window dfass to click button "Continue"
+					keystroke return
+					keystroke "dfconsole"
+					tell window dfass to click button "Continue"
+					delay 0.3
+					--keystroke tab
+					--keystroke return -- to confirm create another user
+					--tell window 1 to click button "Continue"
+					--tell sheet 1 of window 1 to click button "OK"
+					--delay 0.3
+					--tell window dfass to set value of text field 1 of group 1 to "dfconsole"
+					--tell window dfass to click button "Continue"
+					--keystroke tab
+					--keystroke dfpass
+					--keystroke tab
+					--keystroke dfpass
+					tell window dfass to click button "Continue"
+					keystroke " "
+					if (exists checkbox "Show Status in Apple Remote Desktop" of group 1 of window dfass) is true then
+						click checkbox "Show Status in Apple Remote Desktop" of group 1 of window dfass
+					end if
+					tell pop up button 1 of group 1 of window dfass
+						click
+						tell menu 1
+							click menu item "Info 4"
+						end tell
+					end tell
+					tell window dfass to click button "Continue"
+					if (exists checkbox "Create a Global Thawspace of" of group 1 of window dfass) is true then
+						click checkbox "Create a Global Thawspace of" of group 1 of window dfass
+					end if
+					keystroke tab using shift down
+					keystroke "10"
+					tell window dfass to click button "Continue"
+					tell window dfass to click button "Continue"
+					
+					-- enable maintenance schedule
+					
+					tell window dfass to click button 1 of group 1
+				end tell
+			end tell
+			
+			tell application dfass to activate
+			
+			tell application "System Events"
+				tell process dfass
+					-- seems to be an ~8 second delay here... 
+					tell window 1 to set value of text field 1 to "Nightly Maintenance"
+					tell window 1
+						keystroke tab
+						keystroke tab using shift down
+						key code 124
+						--		keystroke "Nightly Maintenance"
+						keystroke tab
+						keystroke tab
+						-- schedule daily MTWTF
+						key code 124
+						keystroke " "
+						key code 124
+						keystroke " "
+						key code 124
+						keystroke " "
+						key code 124
+						keystroke " "
+						-- set hours
+						keystroke tab
+						keystroke "10"
+						keystroke tab
+						keystroke tab
+						keystroke tab
+						keystroke "6"
+						keystroke tab
+						keystroke tab
+						keystroke "a"
+						keystroke tab
+						-- sets apple software updates. comment next line to disable.
+						keystroke " "
+						-- enable maintenance message
+						keystroke tab
+						keystroke tab
+						keystroke tab
+						keystroke " "
+						keystroke tab
+						keystroke " "
+						keystroke return
+						--
+						delay 0.1
+					end tell
+				end tell
+			end tell
+			delay 0.1
+			if destFolderExists then
+				tell application "System Events"
+					tell process dfass
+						delay 0.5
+						tell window 1 to click button "Continue"
+						--click button "Choose…" of
+						--moves to /DFX_Config folder
+						tell group 1 of window dfass to click button "Choose…"
+						keystroke "g" using {command down, shift down}
+						keystroke "/DFX_Config/" & distsrv_name
+						delay 0.3
+						keystroke return
+						--)))enter file name to save
+						keystroke DF_Wks_Prefix
+						keystroke dept_id
+						keystroke return
+						--ready to save!
+						delay 0.9
+						tell window dfass to click button "Continue"
+						tell window dfass to click button "Quit"
+					end tell
+				end tell
+			else
+				tell application "System Events"
+					tell process dfass
+						delay 0.5
+						tell window 1 to click button "Continue"
+						--click button "Choose…" of
+						--moves to /DFX_Config folder
+						tell group 1 of window dfass to click button "Choose…"
+						keystroke "g" using {command down, shift down}
+						keystroke "/DFX_Config"
+						keystroke return
+						--)))enter file name to save
+						keystroke DF_Wks_Prefix
+						keystroke dept_id
+						--)))create subfolder for sync 
+						keystroke "n" using {command down, shift down}
+						keystroke distsrv_name
+						delay 0.1
+						keystroke return
+						delay 0.1
+						keystroke return
+						--ready to save!
+						delay 1.1
+						tell window dfass to click button "Continue"
+						tell window dfass to click button "Quit"
+					end tell
+				end tell
+			end if
+			set itemPathPrefix to "/DFX_Config"
+			--set dept_ID to "12510"
+			--set distsrv_name to "test-adm01"
+			set zipFile to itemPathPrefix & "/" & distsrv_name & "/" & DF_Wks_Prefix & dept_id & ".zip"
+			set itemPath to itemPathPrefix & "/" & distsrv_name & "/" & DF_Wks_Prefix & dept_id & ".pkg"
+			tell application "Finder"
+				do shell script "zip -9 -r " & zipFile & " " & itemPath
+			end tell
+		else
+			--tell application dfass to quit
+			say "skipping " & dept_name
+		end if
+	end if
+	delay 2
+	set destFileExists to false
+	set destFolderExists to false
+end repeat
+
+--key code 123 -- left arrow Key
+--key code 124 -- right arrow Key
+--key code 126 -- up arrow Key
+--key code 125 -- down arrow Key
+
+to parseCsvEntry(csvEntry)
+	set AppleScript's text item delimiters to ","
+	set {dept_Fullname, dept_id, dept_type, legacy_unit, dept_name, dfpass, distsrv_name, distsrv_ip, site_ordinal} to csvEntry's text items
+	set AppleScript's text item delimiters to {""}
+	return {dept_Fullname, dept_id, dept_type, legacy_unit, dept_name, dfpass, distsrv_name, distsrv_ip, site_ordinal}
+	--removed total_macs
+	--removed techcopass
+end parseCsvEntry
+
+
+on GUIScripting_status()
+	-- check to see if assistive devices is enabled
+	tell application "System Events"
+		set UI_enabled to UI elements enabled
+	end tell
+	if UI_enabled is false then
+		tell application "System Preferences"
+			activate
+			set current pane to pane id "com.apple.preference.universalaccess"
+			display dialog "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS x which is currently disabled." & return & return & "You can activate GUI Scripting by selecting the checkbox \"Enable access for assistive devices\" in the Universal Access preference pane." with icon 1 buttons {"Cancel"} default button 1
+		end tell
+	end if
+end GUIScripting_status
